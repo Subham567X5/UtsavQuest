@@ -2,7 +2,7 @@
  * Compresses an image file to a small base64 JPEG string (around 3-8KB)
  * so it can be safely shared via URL parameters.
  */
-export const compressImage = (file: File, maxWidth = 200, maxHeight = 200, quality = 0.5): Promise<string> => {
+export const compressImage = (file: File, maxWidth = 120, maxHeight = 120, quality = 0.35): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
