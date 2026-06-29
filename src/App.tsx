@@ -231,7 +231,7 @@ export default function App() {
     if (secretMessage.trim()) {
       params.set('secret', secretMessage.trim());
     }
-    if (sisterPhoto.trim()) {
+    if (sisterPhoto.trim() && !sisterPhoto.startsWith('data:') && !sisterPhoto.startsWith('blob:')) {
       params.set('photo', sisterPhoto.trim());
     }
     params.set('inst', instrument);
