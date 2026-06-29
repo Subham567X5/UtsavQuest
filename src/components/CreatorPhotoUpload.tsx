@@ -172,8 +172,20 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
             <Image className="w-3.5 h-3.5 text-pink-400" /> Direct image link কীভাবে পাবে:
           </p>
           <ul className="text-[10px] text-slate-400 space-y-1 leading-snug">
-            <li>✅ <a href="https://postimages.org" target="_blank" rel="noopener noreferrer" className="text-green-300 font-bold underline underline-offset-2 hover:text-green-400 transition-colors">postimages.org</a> → upload → "Direct link" copy করো</li>
-            <li>✅ <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" className="text-slate-300 font-bold underline underline-offset-2 hover:text-white transition-colors">imgbb.com</a> → upload → ছবিতে right-click → "Open in new tab" → URL copy</li>
+            <li>✅ <a
+              href="https://postimages.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#86efac', textDecoration: 'underline', cursor: 'pointer', pointerEvents: 'auto' }}
+              className="font-bold hover:opacity-80 transition-opacity"
+            >postimages.org</a> → upload → "Direct link" copy করো</li>
+            <li>✅ <a
+              href="https://imgbb.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#e2e8f0', textDecoration: 'underline', cursor: 'pointer', pointerEvents: 'auto' }}
+              className="font-bold hover:opacity-80 transition-opacity"
+            >imgbb.com</a> → upload → ছবিতে right-click → "Open in new tab" → URL copy</li>
             <li className="text-yellow-400/80">⚠️ URL-এর শেষে .jpg / .png / .webp থাকতে হবে</li>
           </ul>
         </div>
