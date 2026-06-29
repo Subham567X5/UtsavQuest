@@ -4,7 +4,7 @@
  * Uploads an image file to ImgBB and returns the direct image URL.
  * Uses the VITE_IMGBB_KEY environment variable.
  */
-export async function uploadImageToImgBB(file: File): Promise<string> {
+export async function uploadImageToImgBB(file: File, customKey?: string): Promise<string> {
   // Validate file type
   if (!file.type.startsWith('image/')) {
     throw new Error('Only image files are allowed.');
@@ -16,7 +16,7 @@ export async function uploadImageToImgBB(file: File): Promise<string> {
     throw new Error(`File size must be less than ${MAX_SIZE_MB}MB.`);
   }
 
-  const apiKey = (import.meta as any).env.VITE_IMGBB_KEY || '2e45ad3e3d1e41e3a53b8b1bcf00b9ea';
+  const apiKey = customKey || localStorage.getItem('VITE_IMGBB_KEY') || (import.meta as any).env.VITE_IMGBB_KEY || '2e45ad3e3d1e41e3a53b8b1bcf00b9ea';
   if (!apiKey) {
     throw new Error('ImgBB API key is missing. Please configure VITE_IMGBB_KEY.');
   }
@@ -32,17 +32,32 @@ export async function uploadImageToImgBB(file: File): Promise<string> {
 
     if (!response.ok) {
       const errResponse = await response.json().catch(() => ({}));
-      throw new Error(errResponse.error?.message || `Upload failed (Status ${response.status})`);
+      const errMsg = errResponse.error?.message || `Upload failed (Status ${response.status})`;
+      
+      // If the error message indicates an invalid key, throw a specific error code
+      if (errMsg.toLowerCase().includes('api v1 key') || errMsg.toLowerCase().includes('invalid key') || response.status === 400) {
+        const err = new Error('INVALID_KEY');
+        (err as any).originalMessage = errMsg;
+        throw err;
+      }
+      throw new Error(errMsg);
     }
 
     const data = await response.json();
     if (data.success && data.data && data.data.url) {
+      // If the upload succeeded and customKey was provided, persist it
+      if (customKey) {
+        localStorage.setItem('VITE_IMGBB_KEY', customKey);
+      }
       return data.data.url; // Direct image URL
     } else {
       throw new Error('Unexpected API response structure.');
     }
   } catch (error: any) {
     console.error('ImgBB Upload Error:', error);
+    if (error.message === 'INVALID_KEY') {
+      throw error;
+    }
     throw new Error(error.message || 'Network error occurred during upload. Please check your internet connection.');
   }
 }

@@ -21,7 +21,10 @@ export default function PolaroidUpload({
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [tempKey, setTempKey] = useState(localStorage.getItem('VITE_IMGBB_KEY') || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingFileRef = useRef<File | null>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     if (recipientMode) return;
@@ -39,11 +42,18 @@ export default function PolaroidUpload({
     if (file && file.type.startsWith('image/')) {
       setIsUploading(true);
       setUploadError('');
+      setShowKeyInput(false);
+      pendingFileRef.current = file;
       try {
         const url = await uploadImageToImgBB(file);
         onImageLoaded(url);
       } catch (err: any) {
-        setUploadError(err.message || 'আপলোড ব্যর্থ হয়েছে।');
+        if (err.message === 'INVALID_KEY') {
+          setUploadError(lang === 'bn' ? 'ImgBB API key পাওয়া যায়নি বা ভুল। অনুগ্রহ করে সঠিক key দিন:' : 'ImgBB API key is missing or invalid. Please provide a valid key:');
+          setShowKeyInput(true);
+        } else {
+          setUploadError(err.message || 'আপলোড ব্যর্থ হয়েছে।');
+        }
       } finally {
         setIsUploading(false);
       }
@@ -113,20 +123,83 @@ export default function PolaroidUpload({
           )}
 
           {uploadError && (
-            <div className="absolute inset-0 bg-red-950/95 z-30 flex flex-col items-center justify-center p-4 text-center">
-              <span className="text-red-300 text-[10px] font-semibold mb-3 leading-relaxed">
-                {uploadError}
+            <div className="absolute inset-0 bg-red-950/95 z-30 flex flex-col items-center justify-center p-3 text-center">
+              <span className="text-red-300 text-[10px] font-semibold mb-2 leading-relaxed animate-pulse">
+                {uploadError}{' '}
+                {showKeyInput && (
+                  <a 
+                    href="https://api.imgbb.com/" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-pink-400 underline hover:text-pink-300 font-bold"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    (Get Key)
+                  </a>
+                )}
               </span>
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setUploadError('');
-                }}
-                className="bg-red-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors"
-              >
-                {lang === 'bn' ? 'ঠিক আছে' : 'OK'}
-              </button>
+              {showKeyInput ? (
+                <div className="w-full space-y-2 px-2">
+                  <input
+                    type="text"
+                    placeholder="ImgBB API Key"
+                    value={tempKey}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setTempKey(e.target.value);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-[10px] text-white placeholder-slate-600 focus:outline-none focus:border-pink-500"
+                  />
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!tempKey.trim()) return;
+                        setIsUploading(true);
+                        setUploadError('');
+                        try {
+                          if (pendingFileRef.current) {
+                            const url = await uploadImageToImgBB(pendingFileRef.current, tempKey.trim());
+                            onImageLoaded(url);
+                            setShowKeyInput(false);
+                          }
+                        } catch (err: any) {
+                          setUploadError(err.originalMessage || err.message || 'আপলোড ব্যর্থ হয়েছে।');
+                        } finally {
+                          setIsUploading(false);
+                        }
+                      }}
+                      className="bg-pink-600 hover:bg-pink-700 text-white text-[9px] font-bold px-2 py-1 rounded transition-colors"
+                    >
+                      {lang === 'bn' ? 'সংরক্ষণ ও চেষ্টা' : 'Save & Retry'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setUploadError('');
+                        setShowKeyInput(false);
+                      }}
+                      className="bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold px-2 py-1 rounded transition-colors"
+                    >
+                      {lang === 'bn' ? 'বাতিল' : 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUploadError('');
+                  }}
+                  className="bg-red-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  {lang === 'bn' ? 'ঠিক আছে' : 'OK'}
+                </button>
+              )}
             </div>
           )}
 

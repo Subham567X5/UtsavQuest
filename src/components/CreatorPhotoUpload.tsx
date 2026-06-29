@@ -26,8 +26,11 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [tempKey, setTempKey] = useState(localStorage.getItem('VITE_IMGBB_KEY') || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingFileRef = useRef<File | null>(null);
 
   useEffect(() => {
     if (photo && !photo.startsWith('data:')) {
@@ -61,10 +64,12 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
     if (file && file.type.startsWith('image/')) {
       setIsUploading(true);
       setUploadError('');
+      setShowKeyInput(false);
       setUrlInput('');
       setUrlStatus('idle');
       setUrlError('');
       onChange('');
+      pendingFileRef.current = file;
 
       try {
         const url = await uploadImageToImgBB(file);
@@ -72,7 +77,12 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
         setUrlInput(url);
         setUrlStatus('ok');
       } catch (err: any) {
-        setUploadError(err.message || 'আপলোড ব্যর্থ হয়েছে।');
+        if (err.message === 'INVALID_KEY') {
+          setUploadError('ImgBB API key is missing or invalid. Please provide a valid key:');
+          setShowKeyInput(true);
+        } else {
+          setUploadError(err.message || 'আপলোড ব্যর্থ হয়েছে।');
+        }
       } finally {
         setIsUploading(false);
       }
@@ -193,15 +203,67 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
 
       {/* Upload Error banner */}
       {uploadError && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex justify-between items-center">
-          <p className="text-[10px] text-red-300 text-left leading-snug">{uploadError}</p>
-          <button 
-            type="button" 
-            onClick={() => setUploadError('')}
-            className="text-[9px] bg-red-500/20 text-red-300 px-2 py-1 rounded hover:bg-red-500/30 transition-colors"
-          >
-            বন্ধ করুন
-          </button>
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 space-y-2">
+          <div className="flex justify-between items-start gap-2">
+            <p className="text-[10px] text-red-300 text-left leading-snug">
+              {uploadError}{' '}
+              {showKeyInput && (
+                <a 
+                  href="https://api.imgbb.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-pink-400 underline hover:text-pink-300"
+                >
+                  (Get free API Key here)
+                </a>
+              )}
+            </p>
+            <button 
+              type="button" 
+              onClick={() => {
+                setUploadError('');
+                setShowKeyInput(false);
+              }}
+              className="text-[9px] bg-red-500/20 text-red-300 px-2 py-1 rounded hover:bg-red-500/30 transition-colors shrink-0"
+            >
+              বন্ধ করুন
+            </button>
+          </div>
+          {showKeyInput && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Paste ImgBB API Key here"
+                value={tempKey}
+                onChange={(e) => setTempKey(e.target.value)}
+                className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-pink-500"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!tempKey.trim()) return;
+                  setIsUploading(true);
+                  setUploadError('');
+                  try {
+                    if (pendingFileRef.current) {
+                      const url = await uploadImageToImgBB(pendingFileRef.current, tempKey.trim());
+                      onChange(url);
+                      setUrlInput(url);
+                      setUrlStatus('ok');
+                      setShowKeyInput(false);
+                    }
+                  } catch (err: any) {
+                    setUploadError(err.originalMessage || err.message || 'আপলোড ব্যর্থ হয়েছে।');
+                  } finally {
+                    setIsUploading(false);
+                  }
+                }}
+                className="bg-pink-500 text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-pink-600 transition-colors shrink-0"
+              >
+                সংরক্ষণ ও পুনরায় চেষ্টা
+              </button>
+            </div>
+          )}
         </div>
       )}
 
