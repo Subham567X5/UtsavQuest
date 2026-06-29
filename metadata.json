@@ -1,0 +1,8 @@
+{
+  "name": "UtsavQuest",
+  "description": "UtsavQuest (উৎসবকোয়েস্ট) is a premium, interactive, and beautiful game-based birthday quest to unwrap gifts, blow candles, pop balloons, catch blessings, and unlock special wishes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
