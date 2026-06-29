@@ -158,11 +158,19 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
               </div>
               <div className="flex-1 text-left">
                 <p className="text-xs font-extrabold text-pink-400 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Image ready to share!
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" /> Photo added locally!
                 </p>
                 <p className="text-[10px] text-slate-500 font-mono mt-0.5 leading-normal">
-                  Resized & compressed to fit elegantly inside your custom URL.
+                  Preview only — this device can see it.
                 </p>
+                <div className="mt-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-2 py-1.5">
+                  <p className="text-[10px] text-yellow-400 font-bold leading-snug">
+                    ⚠️ Sister won't see this photo in the link!
+                  </p>
+                  <p className="text-[10px] text-yellow-300/70 leading-snug mt-0.5">
+                    Upload the photo to <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" className="underline text-yellow-300 hover:text-white">Imgur.com</a>, copy the direct image link, then switch to <strong>Web URL</strong> mode above.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
