@@ -16,9 +16,9 @@ export async function uploadImageToImgBB(file: File): Promise<string> {
     throw new Error(`File size must be less than ${MAX_SIZE_MB}MB.`);
   }
 
-  const apiKey = (import.meta as any).env.VITE_IMGBB_KEY;
+  const apiKey = (import.meta as any).env.VITE_IMGBB_KEY || '2e45ad3e3d1e41e3a53b8b1bcf00b9ea';
   if (!apiKey) {
-    throw new Error('ImgBB API key is missing. Please configure VITE_IMGBB_KEY in .env file.');
+    throw new Error('ImgBB API key is missing. Please configure VITE_IMGBB_KEY.');
   }
 
   const formData = new FormData();
