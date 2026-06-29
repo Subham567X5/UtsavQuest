@@ -323,12 +323,12 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
           {/* Guidance box */}
           {urlStatus === 'idle' && (
             <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-3 space-y-1.5">
-              <p className="text-[10px] font-bold text-blue-300">💡 How to get a direct image URL:</p>
+              <p className="text-[10px] font-bold text-blue-300">💡 How to get a direct image URL (pick any):</p>
               <ul className="text-[10px] text-slate-400 space-y-1 leading-snug">
+                <li>• <strong className="text-green-300">✅ Easiest — PostImages:</strong> Go to <a href="https://postimages.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">postimages.org</a> → upload → copy the <strong>"Direct link"</strong></li>
+                <li>• <strong className="text-slate-300">ImgBB:</strong> Go to <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">imgbb.com</a> → upload → after upload, right-click the image → "Open image in new tab" → copy URL from address bar (starts with <code className="text-pink-300">i.ibb.co</code>)</li>
                 <li>• <strong className="text-slate-300">Imgur:</strong> Go to <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">imgur.com/upload</a> → upload → right-click image → "Copy image address"</li>
-                <li>• <strong className="text-slate-300">ImgBB:</strong> After upload, on your image page → right-click the image → "Open in new tab" → copy URL from address bar (starts with <code className="text-pink-300">i.ibb.co</code>)</li>
-                <li>• <strong className="text-slate-300">Google Photos:</strong> Share → create link → doesn't work. Use Imgur instead.</li>
-                <li>• The URL must end in <code className="text-green-300">.jpg</code>, <code className="text-green-300">.png</code>, <code className="text-green-300">.webp</code> etc.</li>
+                <li className="text-yellow-400/80">⚠️ URL must end in <code className="text-green-300">.jpg</code>, <code className="text-green-300">.png</code>, <code className="text-green-300">.webp</code> etc.</li>
               </ul>
             </div>
           )}
