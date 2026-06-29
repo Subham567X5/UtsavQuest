@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Image } from 'lucide-react';
+import { Trash2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Image, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { compressImage } from '../utils/imageCompressor';
 
 interface CreatorPhotoUploadProps {
   photo: string;
@@ -9,7 +10,7 @@ interface CreatorPhotoUploadProps {
 
 function testImageUrl(url: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const img = new Image();
+    const img = new window.Image();
     img.onload = () => resolve(true);
     img.onerror = () => resolve(false);
     img.referrerPolicy = 'no-referrer';
@@ -22,11 +23,19 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
   const [urlInput, setUrlInput] = useState(photo.startsWith('data:') ? '' : photo);
   const [urlStatus, setUrlStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
   const [urlError, setUrlError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
+  const [compressing, setCompressing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!photo.startsWith('data:') && photo) {
-      setUrlInput(photo);
+    if (photo) {
+      if (!photo.startsWith('data:')) {
+        setUrlInput(photo);
+      }
+      setUrlStatus('ok');
+    } else {
+      setUrlStatus('idle');
     }
   }, [photo]);
 
@@ -35,6 +44,55 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
     setUrlInput('');
     setUrlStatus('idle');
     setUrlError('');
+  };
+
+  const processFile = async (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      try {
+        setCompressing(true);
+        setUrlError('');
+        const compressedBase64 = await compressImage(file);
+        onChange(compressedBase64);
+        setUrlStatus('ok');
+        setUrlInput(''); // Clear URL input when local file is loaded
+      } catch (err) {
+        console.error("Compression failed:", err);
+        setUrlStatus('error');
+        setUrlError('ছবি প্রসেস করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+      } finally {
+        setCompressing(false);
+      }
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const onButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,9 +142,68 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
 
   return (
     <div className="space-y-3">
-      <label className="block text-xs font-bold text-purple-300 uppercase tracking-wider font-sans">
-        Sister's Photograph — Web URL
+      <label className="block text-xs font-bold text-purple-300 uppercase tracking-wider font-sans text-left">
+        Sister's Photograph — ছবি যোগ করো
       </label>
+
+      {/* Quick Uploader Drop Area */}
+      <div 
+        onDragEnter={handleDrag}
+        onDragOver={handleDrag}
+        onDragLeave={handleDrag}
+        onDrop={handleDrop}
+        onClick={onButtonClick}
+        className={`border-2 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-300 ${
+          dragActive 
+            ? 'border-pink-500 bg-pink-500/10' 
+            : 'border-white/10 hover:border-pink-500/40 bg-black/20 hover:bg-black/40'
+        }`}
+      >
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*"
+          className="hidden"
+        />
+        
+        {compressing ? (
+          <div className="flex flex-col items-center gap-1.5 py-2">
+            <RefreshCw className="w-6 h-6 text-pink-400 animate-spin" />
+            <p className="text-xs font-bold text-purple-200">ছবি প্রসেস হচ্ছে...</p>
+            <p className="text-[10px] text-slate-500">অপেক্ষা করো, সাইজ ছোট করা হচ্ছে</p>
+          </div>
+        ) : photo && photo.startsWith('data:') ? (
+          <div className="flex flex-col items-center gap-1.5 py-1 text-center font-sans">
+            <CheckCircle2 className="w-6 h-6 text-green-400" />
+            <p className="text-xs font-bold text-green-400">ছবি আপলোড সফল! (লোকাল ফাইল)</p>
+            <p className="text-[10px] text-slate-400">কম্প্রেসড ছবি যুক্ত হয়েছে যা লিংকের সাথে শেয়ার হবে ✅</p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClear();
+              }}
+              className="mt-1.5 px-3 py-1 rounded-lg bg-red-500/20 text-red-400 text-[10px] hover:bg-red-500/30 transition-colors font-bold"
+            >
+              ছবি মুছে ফেলুন
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-1 text-center font-sans">
+            <Upload className="w-6 h-6 text-pink-400 animate-pulse mb-1" />
+            <p className="text-xs font-bold text-slate-300">ডিভাইস থেকে সরাসরি ছবি আপলোড করো</p>
+            <p className="text-[10px] text-slate-500">এখানে ক্লিক করো অথবা ফাইলটি ড্র্যাগ অ্যান্ড ড্রপ করো (Quick & Offline!)</p>
+          </div>
+        )}
+      </div>
+
+      {/* Separator */}
+      <div className="flex items-center gap-2 text-[10px] text-slate-600 uppercase tracking-widest my-2 select-none">
+        <div className="h-[1px] bg-white/5 flex-grow" />
+        <span>অথবা direct link ব্যবহার করো</span>
+        <div className="h-[1px] bg-white/5 flex-grow" />
+      </div>
 
       {/* URL Input */}
       <div className="relative">
@@ -96,7 +213,7 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
           onChange={handleUrlChange}
           placeholder="ছবির direct link paste করো (.jpg / .png / .webp)"
           className={`w-full bg-black/40 border rounded-xl px-4 py-3 pr-10 text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 font-sans transition-all ${
-            urlStatus === 'ok' ? 'border-green-500/60 focus:ring-green-500' :
+            urlStatus === 'ok' && !photo.startsWith('data:') ? 'border-green-500/60 focus:ring-green-500' :
             urlStatus === 'error' ? 'border-red-500/60 focus:ring-red-500' :
             'border-white/10 focus:ring-pink-500'
           }`}
@@ -108,7 +225,7 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
                 <RefreshCw className="w-4 h-4 text-pink-400 animate-spin" />
               </motion.div>
             )}
-            {urlStatus === 'ok' && (
+            {urlStatus === 'ok' && !photo.startsWith('data:') && (
               <motion.div key="ok" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ opacity: 0 }}>
                 <CheckCircle2 className="w-4 h-4 text-green-400" />
               </motion.div>
@@ -129,14 +246,18 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl p-3"
+            className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl p-3 animate-fade-in"
           >
             <img src={photo} alt="Preview" className="w-14 h-14 object-cover rounded-lg border border-white/10" referrerPolicy="no-referrer" />
-            <div className="flex-1">
+            <div className="flex-1 text-left">
               <p className="text-[11px] font-bold text-green-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" /> ছবি successfully load হয়েছে!
               </p>
-              <p className="text-[10px] text-green-300/70 mt-0.5">Sister এই ছবি link-এ দেখতে পাবে। ✅</p>
+              <p className="text-[10px] text-green-300/70 mt-0.5">
+                {photo.startsWith('data:') 
+                  ? 'কম্প্রেসড লোকাল ইমেজ (লিংক শেয়ার করলে সচল থাকবে)।' 
+                  : 'Direct URL লিঙ্ক দিয়ে যুক্ত করা ইমেজ।'}
+              </p>
             </div>
             <button
               type="button"
@@ -160,7 +281,7 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
             className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex gap-2"
           >
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <p className="text-[10px] text-red-300 leading-snug">{urlError}</p>
+            <p className="text-[10px] text-red-300 leading-snug text-left">{urlError}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -171,7 +292,7 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
           <p className="text-[10px] font-bold text-slate-300 flex items-center gap-1.5">
             <Image className="w-3.5 h-3.5 text-pink-400" /> Direct image link কীভাবে পাবে:
           </p>
-          <ul className="text-[10px] text-slate-400 space-y-1 leading-snug">
+          <ul className="text-[10px] text-slate-400 space-y-1 leading-snug text-left">
             <li>✅ <a
               href="https://postimages.org"
               target="_blank"

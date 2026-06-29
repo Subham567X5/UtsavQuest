@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, RefreshCw, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { compressImage } from '../utils/imageCompressor';
 
 interface PolaroidUploadProps {
   onImageLoaded: (url: string) => void;
@@ -18,6 +19,7 @@ export default function PolaroidUpload({
   lang = 'bn'
 }: PolaroidUploadProps) {
   const [dragActive, setDragActive] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -31,11 +33,18 @@ export default function PolaroidUpload({
     }
   };
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (recipientMode) return;
     if (file && file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      onImageLoaded(url);
+      try {
+        setCompressing(true);
+        const compressedBase64 = await compressImage(file);
+        onImageLoaded(compressedBase64);
+      } catch (err) {
+        console.error("Compression failed:", err);
+      } finally {
+        setCompressing(false);
+      }
     }
   };
 
@@ -187,13 +196,24 @@ export default function PolaroidUpload({
               {/* Upload CTA block (Hide completely if in recipientMode) */}
               {!recipientMode ? (
                 <div 
-                  onClick={onButtonClick}
+                  onClick={compressing ? undefined : onButtonClick}
                   className="w-full bg-white/10 hover:bg-white/20 border border-white/20 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-98 z-10"
                 >
-                  <Camera className="text-pink-300 w-4 h-4 animate-pulse" />
-                  <span className="text-[10px] text-purple-100 font-bold tracking-tight font-sans">
-                    {lang === 'bn' ? 'এখানে তার ছবি ড্রপ/আপলোড করুন!' : 'Drop/Upload Her Photo Here!'}
-                  </span>
+                  {compressing ? (
+                    <>
+                      <RefreshCw className="text-pink-300 w-4 h-4 animate-spin" />
+                      <span className="text-[10px] text-purple-100 font-bold tracking-tight font-sans">
+                        {lang === 'bn' ? 'ছবি প্রসেস হচ্ছে...' : 'Processing image...'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="text-pink-300 w-4 h-4 animate-pulse" />
+                      <span className="text-[10px] text-purple-100 font-bold tracking-tight font-sans">
+                        {lang === 'bn' ? 'এখানে তার ছবি ড্রপ/আপলোড করুন!' : 'Drop/Upload Her Photo Here!'}
+                      </span>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="text-center pb-1 text-[10px] text-purple-200 font-bold font-sans flex items-center gap-1">
