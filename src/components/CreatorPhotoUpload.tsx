@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Image } from 'lucide-react';
+import { Trash2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Image, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { uploadImageToImgBB } from '../utils/imageUpload';
 
 interface CreatorPhotoUploadProps {
   photo: string;
@@ -22,6 +23,10 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
   const [urlInput, setUrlInput] = useState(photo.startsWith('data:') ? '' : photo);
   const [urlStatus, setUrlStatus] = useState<'idle' | 'testing' | 'ok' | 'error'>('idle');
   const [urlError, setUrlError] = useState('');
+  const [dragActive, setDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -39,6 +44,60 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
     setUrlInput('');
     setUrlStatus('idle');
     setUrlError('');
+    setUploadError('');
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const processFile = async (file: File) => {
+    if (file && file.type.startsWith('image/')) {
+      setIsUploading(true);
+      setUploadError('');
+      setUrlInput('');
+      setUrlStatus('idle');
+      setUrlError('');
+      onChange('');
+
+      try {
+        const url = await uploadImageToImgBB(file);
+        onChange(url);
+        setUrlInput(url);
+        setUrlStatus('ok');
+      } catch (err: any) {
+        setUploadError(err.message || 'আপলোড ব্যর্থ হয়েছে।');
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const onButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    fileInputRef.current?.click();
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,8 +148,69 @@ export default function CreatorPhotoUpload({ photo, onChange }: CreatorPhotoUplo
   return (
     <div className="space-y-3 font-sans">
       <label className="block text-xs font-bold text-purple-300 uppercase tracking-wider text-left">
-        Sister's Photograph — Web URL
+        Sister's Photograph — Upload or Web Link
       </label>
+
+      {/* Drag & Drop Upload Zone */}
+      <div 
+        onDragEnter={handleDrag}
+        onDragOver={handleDrag}
+        onDragLeave={handleDrag}
+        onDrop={handleDrop}
+        onClick={onButtonClick}
+        className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all ${
+          dragActive 
+            ? 'border-pink-500 bg-pink-500/10' 
+            : 'border-white/10 bg-slate-800/30 hover:border-purple-500/40 hover:bg-slate-800/50'
+        }`}
+      >
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          onChange={handleChange}
+          accept="image/*"
+          className="hidden"
+        />
+        {isUploading ? (
+          <div className="flex flex-col items-center space-y-2 py-1">
+            <RefreshCw className="w-5 h-5 text-pink-400 animate-spin" />
+            <p className="text-xs font-bold text-purple-200">
+              ছবি আপলোড হচ্ছে... (Uploading...)
+            </p>
+          </div>
+        ) : (
+          <div className="text-center space-y-1 py-1">
+            <Camera className="w-6 h-6 text-pink-400 mx-auto animate-pulse" />
+            <p className="text-xs font-bold text-slate-200">
+              সরাসরি ছবি আপলোড করতে এখানে ক্লিক/ড্রপ করুন
+            </p>
+            <p className="text-[10px] text-slate-400">
+              Click or drag here to upload from device
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Upload Error banner */}
+      {uploadError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex justify-between items-center">
+          <p className="text-[10px] text-red-300 text-left leading-snug">{uploadError}</p>
+          <button 
+            type="button" 
+            onClick={() => setUploadError('')}
+            className="text-[9px] bg-red-500/20 text-red-300 px-2 py-1 rounded hover:bg-red-500/30 transition-colors"
+          >
+            বন্ধ করুন
+          </button>
+        </div>
+      )}
+
+      {/* Divider */}
+      <div className="flex items-center gap-2 my-2 text-[10px] text-slate-500 font-bold justify-center">
+        <span className="h-px bg-white/5 flex-1" />
+        <span>অথবা ছবির URL দিন (OR PASTE URL)</span>
+        <span className="h-px bg-white/5 flex-1" />
+      </div>
 
       {/* URL Input */}
       <div className="relative">

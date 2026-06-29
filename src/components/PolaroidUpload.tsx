@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Camera, RefreshCw, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { uploadImageToImgBB } from '../utils/imageUpload';
 
 interface PolaroidUploadProps {
   onImageLoaded: (url: string) => void;
@@ -18,6 +19,8 @@ export default function PolaroidUpload({
   lang = 'bn'
 }: PolaroidUploadProps) {
   const [dragActive, setDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -31,11 +34,19 @@ export default function PolaroidUpload({
     }
   };
 
-  const processFile = (file: File) => {
+  const processFile = async (file: File) => {
     if (recipientMode) return;
     if (file && file.type.startsWith('image/')) {
-      const url = URL.createObjectURL(file);
-      onImageLoaded(url);
+      setIsUploading(true);
+      setUploadError('');
+      try {
+        const url = await uploadImageToImgBB(file);
+        onImageLoaded(url);
+      } catch (err: any) {
+        setUploadError(err.message || 'আপলোড ব্যর্থ হয়েছে।');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -92,6 +103,33 @@ export default function PolaroidUpload({
           onDrop={handleDrop}
           className={`relative aspect-[3/4] bg-neutral-900 border border-neutral-800 rounded overflow-hidden flex flex-col items-center justify-center transition-all ${dragActive && !recipientMode ? 'ring-4 ring-pink-400 ring-offset-2' : ''}`}
         >
+          {isUploading && (
+            <div className="absolute inset-0 bg-black/80 z-30 flex flex-col items-center justify-center p-4">
+              <RefreshCw className="text-pink-500 w-8 h-8 mb-2 animate-spin" />
+              <span className="text-white text-[11px] font-bold text-center">
+                {lang === 'bn' ? 'ছবি আপলোড হচ্ছে...' : 'Uploading photograph...'}
+              </span>
+            </div>
+          )}
+
+          {uploadError && (
+            <div className="absolute inset-0 bg-red-950/95 z-30 flex flex-col items-center justify-center p-4 text-center">
+              <span className="text-red-300 text-[10px] font-semibold mb-3 leading-relaxed">
+                {uploadError}
+              </span>
+              <button 
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUploadError('');
+                }}
+                className="bg-red-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors"
+              >
+                {lang === 'bn' ? 'ঠিক আছে' : 'OK'}
+              </button>
+            </div>
+          )}
+
           {savedUrl ? (
             <>
               {/* Actual photo loaded by client */}
